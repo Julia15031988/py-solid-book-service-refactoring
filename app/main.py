@@ -2,86 +2,97 @@ import json
 import xml.etree.ElementTree as ElementTree
 
 
+# --- Book ---
 class Book:
     def __init__(self, title: str, content: str) -> None:
         self.title = title
         self.content = content
 
-    # --- Display methods ---
-    def _display_console(self) -> None:
-        print(self.content)
 
-    def _display_reverse(self) -> None:
-        print(self.content[::-1])
+# --- Display Strategies ---
+class DisplayStrategy:
+    def display(self, book: Book) -> None:
+        raise NotImplementedError
 
-    DISPLAY_STRATEGIES = {
-        "console": _display_console,
-        "reverse": _display_reverse,
-    }
 
-    def display(self, display_type: str) -> None:
-        strategy = self.DISPLAY_STRATEGIES.get(display_type)
-        if not strategy:
-            raise ValueError(f"Unknown display type: {display_type}")
-        strategy(self)
+class ConsoleDisplay(DisplayStrategy):
+    def display(self, book: Book) -> None:
+        print(book.content)
 
-    # --- Print methods ---
-    def _print_console(self) -> None:
-        print(f"Printing the book: {self.title}...")
-        print(self.content)
 
-    def _print_reverse(self) -> None:
-        print(f"Printing the book in reverse: {self.title}...")
-        print(self.content[::-1])
+class ReverseDisplay(DisplayStrategy):
+    def display(self, book: Book) -> None:
+        print(book.content[::-1])
 
-    PRINT_STRATEGIES = {
-        "console": _print_console,
-        "reverse": _print_reverse,
-    }
 
-    def print_book(self, print_type: str) -> None:
-        strategy = self.PRINT_STRATEGIES.get(print_type)
-        if not strategy:
-            raise ValueError(f"Unknown print type: {print_type}")
-        strategy(self)
+# --- Print Strategies ---
+class PrintStrategy:
+    def print(self, book: Book) -> None:
+        raise NotImplementedError
 
-    # --- Serialization ---
-    def _serialize_json(self) -> str:
-        return json.dumps({"title": self.title, "content": self.content})
 
-    def _serialize_xml(self) -> str:
+class ConsolePrint(PrintStrategy):
+    def print(self, book: Book) -> None:
+        print(f"Printing the book: {book.title}...")
+        print(book.content)
+
+
+class ReversePrint(PrintStrategy):
+    def print(self, book: Book) -> None:
+        print(f"Printing the book in reverse: {book.title}...")
+        print(book.content[::-1])
+
+
+# --- Serialize Strategies ---
+class SerializeStrategy:
+    def serialize(self, book: Book) -> str:
+        raise NotImplementedError
+
+
+class JsonSerialize(SerializeStrategy):
+    def serialize(self, book: Book) -> str:
+        return json.dumps({"title": book.title, "content": book.content})
+
+
+class XmlSerialize(SerializeStrategy):
+    def serialize(self, book: Book) -> str:
         root = ElementTree.Element("book")
-        ElementTree.SubElement(root, "title").text = self.title
-        ElementTree.SubElement(root, "content").text = self.content
+        ElementTree.SubElement(root, "title").text = book.title
+        ElementTree.SubElement(root, "content").text = book.content
         return ElementTree.tostring(root, encoding="unicode")
 
-    SERIALIZE_STRATEGIES = {
-        "json": _serialize_json,
-        "xml": _serialize_xml,
-    }
 
-    def serialize(self, serialize_type: str) -> str:
-        strategy = self.SERIALIZE_STRATEGIES.get(serialize_type)
-        if not strategy:
-            raise ValueError(f"Unknown serialize type: {serialize_type}")
-        return strategy(self)
-
-
+# --- Main ---
 def main(book: Book, commands: list[tuple[str, str]]) -> None | str:
     actions = {
-        "display": book.display,
-        "print": book.print_book,
-        "serialize": book.serialize,
+        "display": {
+            "console": ConsoleDisplay(),
+            "reverse": ReverseDisplay(),
+        },
+        "print": {
+            "console": ConsolePrint(),
+            "reverse": ReversePrint(),
+        },
+        "serialize": {
+            "json": JsonSerialize(),
+            "xml": XmlSerialize(),
+        },
     }
 
+    result: str | None = None
     for cmd, method_type in commands:
-        action = actions.get(cmd)
-        if not action:
-            raise ValueError(f"Unknown command: {cmd}")
+        strategy = actions.get(cmd, {}).get(method_type)
+        if not strategy:
+            raise ValueError(f"Unknown command: {cmd} {method_type}")
 
-        result = action(method_type)
-        if cmd == "serialize":
-            return result
+        if cmd == "display":
+            strategy.display(book)
+        elif cmd == "print":
+            strategy.print(book)
+        elif cmd == "serialize":
+            result = strategy.serialize(book)
+
+    return result
 
 
 if __name__ == "__main__":
