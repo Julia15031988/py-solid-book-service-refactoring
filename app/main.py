@@ -1,5 +1,6 @@
 import json
-import xml.etree.ElementTree as etree
+import xml.etree.ElementTree as ElementTree
+
 
 class Book:
     def __init__(self, title: str, content: str) -> None:
@@ -49,10 +50,10 @@ class Book:
         return json.dumps({"title": self.title, "content": self.content})
 
     def _serialize_xml(self) -> str:
-        root = etree.Element("book")
-        etree.SubElement(root, "title").text = self.title
-        etree.SubElement(root, "content").text = self.content
-        return etree.tostring(root, encoding="unicode")
+        root = ElementTree.Element("book")
+        ElementTree.SubElement(root, "title").text = self.title
+        ElementTree.SubElement(root, "content").text = self.content
+        return ElementTree.tostring(root, encoding="unicode")
 
     SERIALIZE_STRATEGIES = {
         "json": _serialize_json,
